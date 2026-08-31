@@ -1,13 +1,12 @@
 # File: backend/api/views.py
-from rest_framework import viewsets
-from rest_framework.decorators import action
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from pgvector.django import CosineDistance
-from .models import Weapon, Attachment, Loadout
-from .serializers import WeaponSerializer, AttachmentSerializer, LoadoutSerializer
-from sentence_transformers import SentenceTransformer
 
-local_ai = SentenceTransformer('all-MiniLM-L6-v2')
+from .models import Weapon, Attachment, Loadout, ai_model
+from .serializers import WeaponSerializer, AttachmentSerializer, LoadoutSerializer
 
 class WeaponViewSet(viewsets.ModelViewSet):
     queryset = Weapon.objects.all()
@@ -22,35 +21,48 @@ class LoadoutViewSet(viewsets.ModelViewSet):
     serializer_class = LoadoutSerializer
 
     def perform_create(self, serializer):
-        tactical_desc = self.request.data.get('tactical_description', '')
-        weapon_id = self.request.data.get('weapon')
-        vector_embedding = None
-        
-        if tactical_desc and weapon_id:
-            try:
-                weapon = Weapon.objects.get(id=weapon_id)
-                ai_context = f"Weapon: {weapon.name}. Strategy: {tactical_desc}"
-                vector_embedding = local_ai.encode(ai_context).tolist()
-            except Exception as e:
-                print(f"Failed to generate AI Vector: {e}")
+        # AI Vector generation is safely handled in models.py save()
+        serializer.save(creator=self.request.user)
 
-        serializer.save(creator=self.request.user, embedding=vector_embedding)
+class VectorSearchView(APIView):
+    """
+    POST /loadouts/search/
+    Accepts a natural language query and returns the top 6 semantically similar loadouts.
+    """
+    permission_classes = [IsAuthenticated]
 
-    # NEW: High-performance semantic search endpoint
-    @action(detail=False, methods=['post'])
-    def search(self, request):
-        query = request.data.get('query', '')
-        if not query:
-            return Response([])
+    def post(self, request, *args, **kwargs):
+        query = request.data.get('query')
+        if not query or not isinstance(query, str) or not query.strip():
+            return Response(
+                {"detail": "A valid 'query' string is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Convert the user's search bar text into a 384-D vector
-        query_vector = local_ai.encode(query).tolist()
+        try:
+            # Encode the query using the global SentenceTransformer model
+            query_vector = ai_model.encode(query.strip()).tolist()
+        except Exception as e:
+            return Response(
+                {"detail": f"Failed to encode query: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-        # Database-level Cosine Distance calculation (blazing fast due to HNSW index)
-        # Orders results by closest contextual match and grabs the top 10
-        results = Loadout.objects.annotate(
+        # Retrieve top 6 loadouts ordered by cosine distance (closest first)
+        loadouts = Loadout.objects.annotate(
             distance=CosineDistance('embedding', query_vector)
-        ).order_by('distance')[:10]
+        ).order_by('distance')[:6]
 
-        serializer = self.get_serializer(results, many=True)
-        return Response(serializer.data)
+        results = []
+        for loadout in loadouts:
+            similarity = 1.0 - loadout.distance
+            results.append({
+                "id": loadout.id,
+                "weapon_name": loadout.weapon.name,
+                "category": loadout.weapon.weapon_type.name,
+                "creator_username": loadout.creator.username,
+                "description": loadout.tactical_description,
+                "similarity": round(similarity, 6)
+            })
+
+        return Response({"results": results}, status=status.HTTP_200_OK)

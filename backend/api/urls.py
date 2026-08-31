@@ -1,12 +1,13 @@
-# File: backend/api/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import WeaponViewSet, LoadoutViewSet
+from .views import WeaponViewSet, LoadoutViewSet, VectorSearchView
 
 router = DefaultRouter()
 router.register(r'weapons', WeaponViewSet)
 router.register(r'loadouts', LoadoutViewSet)
 
 urlpatterns = [
+    # Custom endpoint MUST be placed before the router to prevent "search" from being treated as an ID
+    path('loadouts/search/', VectorSearchView.as_view(), name='loadout-vector-search'),
     path('', include(router.urls)),
 ]
