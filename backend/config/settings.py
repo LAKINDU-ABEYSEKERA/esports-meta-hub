@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'pgvector.django',
+
+    'django.contrib.postgres',
     # Local Apps
     'api',
 ]
