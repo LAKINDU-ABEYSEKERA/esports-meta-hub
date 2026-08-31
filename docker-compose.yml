@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  # Database with pgvector extension for AI similarity search
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: meta_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: meta_db
+      POSTGRES_USER: meta_admin
+      POSTGRES_PASSWORD: local_password_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis Broker for Celery tasks and Django Channels WebSockets
+  redis:
+    image: redis:7.2-alpine
+    container_name: meta_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
