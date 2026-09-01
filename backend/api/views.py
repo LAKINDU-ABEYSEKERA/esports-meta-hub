@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 from pgvector.django import CosineDistance
 
 from .models import Weapon, Attachment, Loadout, ai_model
@@ -23,6 +24,24 @@ class LoadoutViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # AI Vector generation is safely handled in models.py save()
         serializer.save(creator=self.request.user)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """
+        Returns the authenticated user's personal loadouts, ordered by most recent.
+        """
+        loadouts = Loadout.objects.filter(creator=request.user).order_by('-created_at')
+        results = []
+        for loadout in loadouts:
+            results.append({
+                "id": loadout.id,
+                "weapon_name": loadout.weapon.name,
+                "category": loadout.weapon.weapon_type.name,
+                "creator_username": loadout.creator.username,
+                "description": loadout.tactical_description,
+                "similarity": None
+            })
+        return Response({"results": results}, status=status.HTTP_200_OK)
 
 class VectorSearchView(APIView):
     """

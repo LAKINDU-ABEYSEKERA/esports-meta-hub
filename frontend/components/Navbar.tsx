@@ -30,6 +30,7 @@ function decodeJwtPayload(token: string | undefined): Record<string, any> | null
 const navLinks = [
   { href: "/", label: "Search Graph", icon: Search },
   { href: "/loadouts/new", label: "Deploy Loadout", icon: Crosshair },
+  { href: "/profile", label: "Command Center", icon: User }, // Add this line
 ];
 
 // MUST be defined outside the component to prevent React re-render glitches

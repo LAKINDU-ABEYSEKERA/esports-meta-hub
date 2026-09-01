@@ -1,153 +1,190 @@
-// File: frontend/app/loadouts/new/page.tsx
-'use client';
+// frontend/app/loadouts/new/page.tsx
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import api from '@/lib/api'; // Your custom secure interceptor
-import Cookies from 'js-cookie';
-import { Crosshair, FileText, Send, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-
-// Shadcn UI Components
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Crosshair, Loader2, ShieldAlert } from "lucide-react";
+import Cookies from "js-cookie";
+import api from "@/lib/api";
 
 interface Weapon {
   id: number;
   name: string;
 }
 
-export default function CreateLoadout() {
-  const [weapons, setWeapons] = useState<Weapon[]>([]);
-  const [selectedWeapon, setSelectedWeapon] = useState('');
-  const [tacticalDescription, setTacticalDescription] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+export default function DeployLoadoutPage() {
   const router = useRouter();
+  const [weapons, setWeapons] = useState<Weapon[]>([]);
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
+  const [tacticalDescription, setTacticalDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchingWeapons, setFetchingWeapons] = useState(true);
 
+  // Authentication check & weapon fetch
   useEffect(() => {
-    const fetchWeapons = async () => {
-      try {
-        const res = await api.get('/weapons/'); 
-        setWeapons(res.data);
-      } catch (err) {
-        console.error('Failed to fetch weapons', err);
-      }
-    };
-    fetchWeapons();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    const token = Cookies.get('access_token');
+    const token = Cookies.get("access_token");
     if (!token) {
-      setError('Authentication missing. Please log in again.');
-      setLoading(false);
+      router.replace("/login");
       return;
     }
 
-    try {
-      await api.post('/loadouts/', {
-        weapon: selectedWeapon,
-        tactical_description: tacticalDescription,
-        attachments: []
-      });
-      
-      router.push('/');
-    } catch (err: any) {
-      const serverError = err.response?.data?.detail;
-      // Strictly enforce string typing to satisfy TypeScript
-      if (typeof serverError === 'string') {
-        setError(serverError);
-      } else {
-        setError('Failed to submit loadout. Please verify your data.');
+    const fetchWeapons = async () => {
+      try {
+        const response = await api.get("/weapons/");
+        setWeapons(response.data);
+      } catch (err: any) {
+        console.error("Failed to fetch weapons:", err);
+        setError("Failed to load weapon list. Please try again.");
+      } finally {
+        setFetchingWeapons(false);
       }
-    } finally {
+    };
+
+    fetchWeapons();
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWeaponId || !tacticalDescription.trim()) {
+      setError("Please select a weapon and provide a tactical description.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await api.post("/loadouts/", {
+        weapon: Number(selectedWeaponId),
+        tactical_description: tacticalDescription.trim(),
+      });
+      router.push("/profile");
+    } catch (err: any) {
+      console.error("Deployment failed:", err);
+      setError(
+        err?.response?.data?.detail ||
+          "Deployment failed. Please try again or check authentication."
+      );
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-100 p-8 flex justify-center items-center">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="max-w-2xl w-full relative z-10"
-      >
-        <header className="mb-8 border-b border-slate-800 pb-4">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 tracking-tight">
-            Forge New Loadout
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Ambient background radial gradient */}
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-950 to-slate-950" />
+
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
+            Deployment Uplink
           </h1>
-          <p className="text-slate-400 mt-2">Design and deploy your meta build to the vector database.</p>
-        </header>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Configure and deploy a new tactical loadout to your command center.
+          </p>
+        </div>
 
-        {error && (
-          <div className="mb-6 bg-red-950/40 border border-red-900 text-red-400 p-4 rounded-xl flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <p className="text-sm font-medium">{error}</p>
-          </div>
-        )}
+        {/* Form container with slide-up spring */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="p-8 rounded-xl bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/5"
+        >
+          {fetchingWeapons ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 text-cyan-400 animate-spin" />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Weapon Selection */}
+              <div>
+                <label
+                  htmlFor="weapon"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Primary Weapon
+                </label>
+                <select
+                  id="weapon"
+                  value={selectedWeaponId}
+                  onChange={(e) => setSelectedWeaponId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 outline-none transition"
+                >
+                  <option value="" disabled>
+                    Select a weapon...
+                  </option>
+                  {weapons.map((weapon) => (
+                    <option key={weapon.id} value={weapon.id}>
+                      {weapon.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8 bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl">
-          
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <Crosshair className="w-4 h-4 text-cyan-500" />
-              Base Platform
-            </label>
-    <Select onValueChange={(value) => setSelectedWeapon(value as string)} required>
-              <SelectTrigger className="w-full bg-slate-950 border-slate-800 focus:ring-cyan-500/50 h-14 rounded-xl text-slate-200">
-                <SelectValue placeholder="Select a weapon..." />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800 text-slate-200 rounded-xl">
-                {weapons.map((w) => (
-                  <SelectItem key={w.id} value={w.id.toString()} className="focus:bg-slate-800 focus:text-cyan-400 cursor-pointer">
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              {/* Tactical Description */}
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Tactical Description
+                </label>
+                <textarea
+                  id="description"
+                  value={tacticalDescription}
+                  onChange={(e) => setTacticalDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Describe your loadout strategy, attachments, playstyle..."
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 placeholder-slate-500 outline-none transition resize-none"
+                />
+              </div>
 
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              <FileText className="w-4 h-4 text-emerald-500" />
-              Tactical Analysis
-            </label>
-            <Textarea
-              required
-              rows={5}
-              value={tacticalDescription}
-              onChange={(e) => setTacticalDescription(e.target.value)}
-              placeholder="Detail the playstyle, strengths, and ideal engagement distances..."
-              className="w-full bg-slate-950 border-slate-800 focus-visible:ring-cyan-500/50 resize-none text-slate-200 p-4 rounded-xl text-lg"
-            />
-          </div>
+              {/* Error message */}
+              {error && (
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-3">
+                  <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-          <Button
-            type="submit"
-            disabled={loading || !selectedWeapon}
-            className="w-full h-14 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-lg transition-all rounded-xl shadow-[0_0_20px_rgba(8,145,178,0.3)] hover:shadow-[0_0_30px_rgba(8,145,178,0.5)]"
-          >
-            {loading ? 'Generating AI Vector...' : (
-              <>
-                <Send className="w-5 h-5 mr-2" /> Deploy Loadout
-              </>
-            )}
-          </Button>
-        </form>
-      </motion.div>
-    </main>
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={loading || !selectedWeaponId || !tacticalDescription.trim()}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ boxShadow: "0 0 20px rgba(34,211,238,0.8)" }}
+                animate={
+                  loading
+                    ? {
+                        boxShadow: [
+                          "0px 0px 0px rgba(8,145,178,0)",
+                          "0px 0px 20px rgba(8,145,178,0.8)",
+                          "0px 0px 0px rgba(8,145,178,0)",
+                        ],
+                        transition: {
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        },
+                      }
+                    : { boxShadow: "0px 0px 0px rgba(8,145,178,0)" }
+                }
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Crosshair className="h-5 w-5" />
+                )}
+                Deploy Loadout
+              </motion.button>
+            </form>
+          )}
+        </motion.div>
+      </div>
+    </div>
   );
 }

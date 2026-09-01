@@ -1,17 +1,20 @@
+// frontend/components/LoadoutCard.tsx
 "use client";
 
-import { motion, Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import { User } from "lucide-react";
 
+// Type definition for a Loadout returned by the backend
 export interface Loadout {
   id: number;
   weapon_name: string;
   category: string;
   creator_username: string;
   description: string;
-  similarity: number; 
+  similarity?: number | null; // optional; null when not a vector search result
 }
 
+// Map confidence levels to color schemes (hex and tailwind classes)
 const confidenceColors = {
   high: {
     label: "High",
@@ -42,6 +45,17 @@ const confidenceColors = {
   },
 };
 
+// Neutral fallback for when similarity is null/undefined (used for hover glow on weapon name)
+const neutralConfidence = {
+  label: "",
+  text: "text-slate-400",
+  bar: "bg-slate-500",
+  head: "bg-slate-300",
+  hex: "#64748b",
+  borderHover: "hover:border-slate-500/50",
+  shadow: "rgba(100,116,139,0.5)",
+};
+
 function getConfidenceLevel(similarity: number) {
   const percent = Math.round(similarity * 100);
   if (percent >= 70) return confidenceColors.high;
@@ -49,7 +63,8 @@ function getConfidenceLevel(similarity: number) {
   return confidenceColors.low;
 }
 
-const textContainerVariants: Variants = {
+// Stagger container for text elements inside the card
+const textContainerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -60,7 +75,7 @@ const textContainerVariants: Variants = {
   },
 };
 
-const textItemVariants: Variants = {
+const textItemVariants = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0 },
 };
@@ -70,8 +85,13 @@ interface LoadoutCardProps {
 }
 
 export default function LoadoutCard({ loadout }: LoadoutCardProps) {
-  const confidence = getConfidenceLevel(loadout.similarity);
-  const percent = Math.round(loadout.similarity * 100);
+  // Conditional similarity check
+  const hasSimilarity = loadout.similarity !== undefined && loadout.similarity !== null;
+
+  // Only call getConfidenceLevel if similarity exists, otherwise use neutral fallback
+  const confidence = hasSimilarity
+    ? getConfidenceLevel(loadout.similarity as number)
+    : neutralConfidence;
 
   return (
     <motion.div
@@ -79,9 +99,6 @@ export default function LoadoutCard({ loadout }: LoadoutCardProps) {
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0 },
       }}
-      whileTap={{ scale: 0.98 }}
-      className={`relative p-6 rounded-xl bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 ${confidence.borderHover} shadow-lg shadow-slate-900/30 transition-all group`}
-      style={{ boxShadow: "0 0 0 rgba(0,0,0,0)" }}
       whileHover={{
         scale: 1.05,
         y: -10,
@@ -91,17 +108,22 @@ export default function LoadoutCard({ loadout }: LoadoutCardProps) {
           `0 0 20px ${confidence.shadow}`,
         ],
         transition: {
-          duration: 1,
-          repeat: Infinity,
-          ease: "easeInOut",
+          scale: { type: "spring", stiffness: 200, damping: 20 },
+          y: { type: "spring", stiffness: 200, damping: 20 },
+          boxShadow: { duration: 1, repeat: Infinity, ease: "easeInOut" },
         },
       }}
+      whileTap={{ scale: 0.98 }}
+      className={`relative p-6 rounded-xl bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 ${confidence.borderHover} shadow-lg shadow-slate-900/30 transition-all group`}
+      style={{ boxShadow: "0 0 0 rgba(0,0,0,0)" }}
     >
+      {/* Inner staggered text */}
       <motion.div
         variants={textContainerVariants}
         initial="hidden"
         animate="show"
       >
+        {/* Weapon Name and Category */}
         <div className="flex items-start justify-between mb-3">
           <div>
             <motion.h3
@@ -127,6 +149,7 @@ export default function LoadoutCard({ loadout }: LoadoutCardProps) {
           </motion.div>
         </div>
 
+        {/* Tactical Description */}
         <motion.p
           variants={textItemVariants}
           className="text-slate-300 text-sm leading-relaxed mb-4 line-clamp-3"
@@ -134,41 +157,46 @@ export default function LoadoutCard({ loadout }: LoadoutCardProps) {
           {loadout.description}
         </motion.p>
 
-        <motion.div variants={textItemVariants} className="mt-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium text-slate-400">
-              Match Confidence
-            </span>
-            <span className={`text-sm font-bold ${confidence.text}`}>
-              {percent}% · {confidence.label}
-            </span>
-          </div>
-          <div className="relative w-full h-2 bg-slate-800 rounded-full">
-            <motion.div
-              className={`absolute left-0 top-0 h-full rounded-full ${confidence.bar}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${percent}%` }}
-              transition={{
-                type: "spring",
-                stiffness: 50,
-                damping: 10,
-                delay: 0.2,
-              }}
-            />
-            <motion.div
-              className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full ${confidence.head}`}
-              style={{ boxShadow: `0 0 12px 3px ${confidence.shadow}` }}
-              initial={{ left: "0%" }}
-              animate={{ left: `calc(${percent}% - 6px)` }}
-              transition={{
-                type: "spring",
-                stiffness: 50,
-                damping: 10,
-                delay: 0.2,
-              }}
-            />
-          </div>
-        </motion.div>
+        {/* Match Confidence Meter - only rendered if similarity is present */}
+        {hasSimilarity && (
+          <motion.div variants={textItemVariants} className="mt-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-slate-400">
+                Match Confidence
+              </span>
+              <span className={`text-sm font-bold ${confidence.text}`}>
+                {Math.round((loadout.similarity as number) * 100)}% · {confidence.label}
+              </span>
+            </div>
+            <div className="relative w-full h-2 bg-slate-800 rounded-full">
+              {/* Filled bar */}
+              <motion.div
+                className={`absolute left-0 top-0 h-full rounded-full ${confidence.bar}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.round((loadout.similarity as number) * 100)}%` }}
+                transition={{
+                  type: "spring",
+                  stiffness: 50,
+                  damping: 10,
+                  delay: 0.2,
+                }}
+              />
+              {/* Glowing head */}
+              <motion.div
+                className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full ${confidence.head}`}
+                style={{ boxShadow: `0 0 12px 3px ${confidence.shadow}` }}
+                initial={{ left: "0%" }}
+                animate={{ left: `calc(${Math.round((loadout.similarity as number) * 100)}% - 6px)` }}
+                transition={{
+                  type: "spring",
+                  stiffness: 50,
+                  damping: 10,
+                  delay: 0.2,
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );
