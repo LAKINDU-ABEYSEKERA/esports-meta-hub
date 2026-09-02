@@ -1,30 +1,45 @@
-version: '3.9'
-
 services:
-  # Database with pgvector extension for AI similarity search
-  postgres:
-    image: pgvector/pgvector:pg16
-    container_name: meta_postgres
-    restart: always
+  db:
+    image: ankane/pgvector:latest
     environment:
-      POSTGRES_DB: meta_db
-      POSTGRES_USER: meta_admin
-      POSTGRES_PASSWORD: local_password_123
+      POSTGRES_DB: esports_meta
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgvector_data:/var/lib/postgresql/data
 
-  # Redis Broker for Celery tasks and Django Channels WebSockets
-  redis:
-    image: redis:7.2-alpine
-    container_name: meta_redis
-    restart: always
+  backend:
+    build:
+      context: ./backend
     ports:
-      - "6379:6379"
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres_password@db:5432/esports_meta
+      - DB_NAME=esports_meta
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - SECRET_KEY=your-secret-key-here
+      - DEBUG=0
     volumes:
-      - redis_data:/data
+      - hf_cache:/root/.cache/huggingface
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
 
 volumes:
-  postgres_data:
-  redis_data:
+  pgvector_data:
+  hf_cache:

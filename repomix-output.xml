@@ -1,0 +1,2824 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: node_modules/**, .next/**, .git/**, dist/**, build/**, venv/**, .venv/**, __pycache__/**, *.pyc, *.sqlite3, .cache/**
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+backend/
+  api/
+    migrations/
+      __init__.py
+      0001_enable_vector_extension.py
+      0002_enable_vector_extension.py
+      0003_initial.py
+      0004_rename_category_weapon_weapon_type_and_more.py
+      0005_loadout_loadout_embedding_index.py
+      0006_weaponcategory_alter_weapon_weapon_type.py
+    __init__.py
+    admin.py
+    apps.py
+    models.py
+    serializers.py
+    tests.py
+    urls.py
+    views.py
+  config/
+    __init__.py
+    asgi.py
+    settings.py
+    urls.py
+    wsgi.py
+  .dockerignore
+  Dockerfile
+  manage.py
+  package.json
+  requirements.txt
+frontend/
+  app/
+    loadouts/
+      new/
+        page.tsx
+    login/
+      page.tsx
+    profile/
+      page.tsx
+    favicon.ico
+    globals.css
+    layout.tsx
+    page.tsx
+  components/
+    ui/
+      button.tsx
+      input.tsx
+      select.tsx
+      textarea.tsx
+    LoadoutCard.tsx
+    Navbar.tsx
+    WeaponCard.tsx
+  lib/
+    api.ts
+    utils.ts
+  public/
+    file.svg
+    globe.svg
+    next.svg
+    vercel.svg
+    window.svg
+  .dockerignore
+  .gitignore
+  AGENTS.md
+  CLAUDE.md
+  components.json
+  Dockerfile
+  eslint.config.mjs
+  next.config.ts
+  package.json
+  postcss.config.mjs
+  README.md
+  tsconfig.json
+.gitignore
+docker-compose.yml
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="backend/.dockerignore">
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+db.sqlite3
+.git
+.cache/
+</file>
+
+<file path="backend/Dockerfile">
+FROM python:3.12-slim-bookworm
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Configure apt with timeouts and retries
+RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80retries && \
+    echo 'Acquire::http::Timeout "60";' >> /etc/apt/apt.conf.d/80retries && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gcc libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Pre-install CPU-only PyTorch (drastically reduces download size and prevents CUDA bloat)
+RUN pip install --no-cache-dir --default-timeout=1000 --retries 10 \
+    torch --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --default-timeout=1000 --retries 10 -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "config.wsgi:application"]
+</file>
+
+<file path="frontend/.dockerignore">
+node_modules/
+.next/
+out/
+build/
+.git
+npm-debug.log*
+</file>
+
+<file path="frontend/Dockerfile">
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+</file>
+
+<file path="backend/api/migrations/__init__.py">
+
+</file>
+
+<file path="backend/api/migrations/0001_enable_vector_extension.py">
+from django.db import migrations
+from pgvector.django import VectorExtension
+
+class Migration(migrations.Migration):
+
+    dependencies = []
+
+    operations = [
+        VectorExtension(), # Activates AI vector capabilities in PostgreSQL
+    ]
+</file>
+
+<file path="backend/api/migrations/0002_enable_vector_extension.py">
+# Generated by Django 6.1 on 2026-08-29 05:07
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('api', '0001_enable_vector_extension'),
+    ]
+
+    operations = [
+    ]
+</file>
+
+<file path="backend/api/migrations/0003_initial.py">
+# Generated by Django 6.1 on 2026-08-29 05:08
+
+import django.db.models.deletion
+import pgvector.django.vector
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        ('api', '0002_enable_vector_extension'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Attachment',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=100)),
+                ('slot', models.CharField(max_length=50)),
+                ('ads_speed_modifier', models.FloatField(default=0.0)),
+                ('recoil_modifier', models.FloatField(default=0.0)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Weapon',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=100, unique=True)),
+                ('category', models.CharField(max_length=50)),
+                ('base_damage', models.FloatField()),
+                ('base_fire_rate', models.FloatField()),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Loadout',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('tactical_description', models.TextField(help_text='LLM generated summary of the build')),
+                ('embedding', pgvector.django.vector.VectorField(blank=True, dimensions=1536, null=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('attachments', models.ManyToManyField(blank=True, to='api.attachment')),
+                ('creator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('weapon', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.weapon')),
+            ],
+        ),
+    ]
+</file>
+
+<file path="backend/api/migrations/0004_rename_category_weapon_weapon_type_and_more.py">
+# Generated by Django 6.1 on 2026-08-31 09:34
+
+import django.db.models.deletion
+import pgvector.django.vector
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('api', '0003_initial'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.RenameField(
+            model_name='weapon',
+            old_name='category',
+            new_name='weapon_type',
+        ),
+        migrations.RemoveField(
+            model_name='attachment',
+            name='ads_speed_modifier',
+        ),
+        migrations.RemoveField(
+            model_name='attachment',
+            name='recoil_modifier',
+        ),
+        migrations.RemoveField(
+            model_name='weapon',
+            name='base_damage',
+        ),
+        migrations.RemoveField(
+            model_name='weapon',
+            name='base_fire_rate',
+        ),
+        migrations.AlterField(
+            model_name='loadout',
+            name='creator',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='loadouts', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AlterField(
+            model_name='loadout',
+            name='embedding',
+            field=pgvector.django.vector.VectorField(blank=True, dimensions=384, null=True),
+        ),
+        migrations.AlterField(
+            model_name='loadout',
+            name='weapon',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='loadouts', to='api.weapon'),
+        ),
+        migrations.AlterField(
+            model_name='weapon',
+            name='name',
+            field=models.CharField(max_length=100),
+        ),
+    ]
+</file>
+
+<file path="backend/api/migrations/0005_loadout_loadout_embedding_index.py">
+# Generated by Django 6.1 on 2026-08-31 10:06
+
+import pgvector.django.indexes
+from django.conf import settings
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('api', '0004_rename_category_weapon_weapon_type_and_more'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AddIndex(
+            model_name='loadout',
+            index=pgvector.django.indexes.HnswIndex(ef_construction=64, fields=['embedding'], m=16, name='loadout_embedding_index', opclasses=['vector_cosine_ops']),
+        ),
+    ]
+</file>
+
+<file path="backend/api/migrations/0006_weaponcategory_alter_weapon_weapon_type.py">
+# Generated by Django 6.1 on 2026-08-31 11:37
+
+import django.db.models.deletion
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('api', '0005_loadout_loadout_embedding_index'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='WeaponCategory',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=50, unique=True)),
+            ],
+        ),
+        migrations.AlterField(
+            model_name='weapon',
+            name='weapon_type',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='weapons', to='api.weaponcategory'),
+        ),
+    ]
+</file>
+
+<file path="backend/api/__init__.py">
+
+</file>
+
+<file path="backend/api/apps.py">
+from django.apps import AppConfig
+
+
+class ApiConfig(AppConfig):
+    name = 'api'
+</file>
+
+<file path="backend/api/tests.py">
+from django.test import TestCase
+
+# Create your tests here.
+</file>
+
+<file path="backend/config/__init__.py">
+
+</file>
+
+<file path="backend/config/asgi.py">
+"""
+ASGI config for config project.
+
+It exposes the ASGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/6.1/howto/deployment/asgi/
+"""
+
+import os
+
+from django.core.asgi import get_asgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+application = get_asgi_application()
+</file>
+
+<file path="backend/config/wsgi.py">
+"""
+WSGI config for config project.
+
+It exposes the WSGI callable as a module-level variable named ``application``.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/6.1/howto/deployment/wsgi/
+"""
+
+import os
+
+from django.core.wsgi import get_wsgi_application
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+application = get_wsgi_application()
+</file>
+
+<file path="backend/manage.py">
+#!/usr/bin/env python
+"""Django's command-line utility for administrative tasks."""
+import os
+import sys
+
+
+def main():
+    """Run administrative tasks."""
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    try:
+        from django.core.management import execute_from_command_line
+    except ImportError as exc:
+        raise ImportError(
+            "Couldn't import Django. Are you sure it's installed and "
+            "available on your PYTHONPATH environment variable? Did you "
+            "forget to activate a virtual environment?"
+        ) from exc
+    execute_from_command_line(sys.argv)
+
+
+if __name__ == '__main__':
+    main()
+</file>
+
+<file path="backend/package.json">
+{
+  "dependencies": {
+    "js-cookie": "^3.0.8"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6"
+  }
+}
+</file>
+
+<file path="frontend/app/login/page.tsx">
+// File: frontend/app/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import { motion } from 'framer-motion';
+import { Shield, Loader2, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+export default function Login() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await axios.post('http://localhost:8000/api/v1/token/', {
+        username,
+        password,
+      });
+      
+      // Store tokens securely
+      Cookies.set('access_token', res.data.access, { expires: 1 }); // 1 day
+      Cookies.set('refresh_token', res.data.refresh, { expires: 7 }); // 7 days
+      
+      // Redirect to the deploy page
+      router.push('/loadouts/new');
+    } catch (err) {
+      setError('Invalid credentials. Server rejected the connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Ambient Glow */}
+      <div className="absolute w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl relative z-10"
+      >
+        <div className="flex flex-col items-center mb-8">
+          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-4 shadow-[0_0_20px_rgba(8,145,178,0.15)]">
+            <Shield className="w-8 h-8 text-cyan-400" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Secure Uplink</h1>
+          <p className="text-slate-400 mt-2 text-sm">Authenticate to access the forge.</p>
+        </div>
+
+        {error && (
+          <div className="mb-6 bg-red-950/50 border border-red-900/50 text-red-400 p-3 rounded-lg flex items-center gap-3 text-sm font-medium">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Operative ID (Username)</label>
+            <input
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl h-12 px-4 text-slate-200 outline-none transition-all"
+            />
+          </div>
+          
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Passcode</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl h-12 px-4 text-slate-200 outline-none transition-all"
+            />
+          </div>
+
+          <Button 
+            type="submit" 
+            disabled={loading}
+            className="w-full h-12 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl mt-4 transition-all shadow-[0_0_15px_rgba(8,145,178,0.3)] hover:shadow-[0_0_25px_rgba(8,145,178,0.5)]"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Establish Connection'}
+          </Button>
+        </form>
+      </motion.div>
+    </main>
+  );
+}
+</file>
+
+<file path="frontend/app/profile/page.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { Trash2, ShieldAlert, User } from "lucide-react";
+import Cookies from "js-cookie";
+import api from "@/lib/api";
+import LoadoutCard, { type Loadout } from "@/components/LoadoutCard";
+
+export default function ProfilePage() {
+  const router = useRouter();
+  
+  // FIX: Explicitly type the array so TypeScript knows it contains Loadout objects
+  const [loadouts, setLoadouts] = useState<Loadout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    const fetchLoadouts = async () => {
+      try {
+        const response = await api.get("/loadouts/me/");
+        setLoadouts(response.data.results);
+      } catch (err: any) {
+        console.error("Failed to fetch profile loadouts:", err);
+        setError(
+          err?.response?.data?.detail ||
+            "Failed to load your deployments. Please try again."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLoadouts();
+  }, [router]);
+
+  const handleDelete = async (id: number) => {
+    try {
+      await api.delete(`/loadouts/${id}/`);
+      setLoadouts((prev) => prev.filter((loadout) => loadout.id !== id));
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      setError("Failed to revoke deployment. Please try again.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-950 to-slate-950" />
+      
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
+            Personal Command Center
+          </h1>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Manage your deployed tactical loadouts. Review, deploy, or revoke
+            configurations from the front lines.
+          </p>
+        </div>
+
+        <div className="flex justify-center mb-10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50">
+            <User className="h-5 w-5 text-cyan-400" />
+            <span className="text-cyan-300 font-medium">
+              Active Deployments: {loadouts.length}
+            </span>
+          </div>
+        </div>
+
+        {error && (
+          <div className="max-w-3xl mx-auto mb-8 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-3">
+            <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex justify-center py-16">
+            <div className="h-10 w-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {!loading && !error && loadouts.length > 0 && (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: { staggerChildren: 0.05 },
+              },
+            }}
+          >
+            <AnimatePresence>
+              {loadouts.map((loadout) => (
+                <motion.div
+                  key={loadout.id}
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  className="relative group"
+                >
+                  <LoadoutCard loadout={loadout} />
+                  <button
+                    onClick={() => handleDelete(loadout.id)}
+                    className="absolute top-3 right-3 p-2 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Revoke Deployment"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {!loading && !error && loadouts.length === 0 && (
+          <div className="text-center py-16">
+            <User className="h-12 w-12 mx-auto text-slate-700 mb-4" />
+            <p className="text-slate-400 text-lg">
+              No active deployments found.
+            </p>
+            <p className="text-slate-500 text-sm mt-1">
+              Deploy a new loadout to see it here.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/app/globals.css">
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+</file>
+
+<file path="frontend/app/layout.tsx">
+// File: frontend/app/layout.tsx
+import type { Metadata } from 'next';
+import { Outfit } from 'next/font/google';
+import './globals.css';
+import Navbar from '@/components/Navbar';
+
+// Initialize the futuristic, round font
+const outfit = Outfit({ 
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  display: 'swap',
+});
+
+export const metadata: Metadata = {
+  title: 'Esports Meta & Loadout Hub',
+  description: 'Community-driven weapon loadouts and tactical analysis.',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en" className="dark">
+      {/* 
+        Applying outfit.className forces this font globally. 
+        'antialiased' ensures smooth, crisp rendering on modern screens. 
+      */}
+      <body className={`${outfit.className} antialiased bg-slate-950 text-slate-100 min-h-screen`}>
+        <Navbar />
+        {children}
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="frontend/app/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { Search, Loader2, Crosshair, ShieldAlert } from "lucide-react";
+import api from "@/lib/api";
+import LoadoutCard, { type Loadout } from "@/components/LoadoutCard";
+
+interface SearchResponse {
+  results: Loadout[];
+}
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.03,
+    },
+  },
+};
+
+const headerFormVariants: Variants = {
+  hidden: { opacity: 0, y: -40 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 200,
+      damping: 20,
+    },
+  },
+};
+
+const heroTextContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const heroTextItem: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120, damping: 12 } },
+};
+
+export default function TacticalSearchPage() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Loadout[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setResults([]);
+
+    try {
+      const response = await api.post<SearchResponse>("/loadouts/search/", {
+        query: query.trim(),
+      });
+      setResults(response.data.results);
+    } catch (err: any) {
+      console.error("Search failed:", err);
+      setError(
+        err?.response?.data?.detail ||
+          "Search failed. Please try again or check authentication."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-950 to-slate-950" />
+
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          variants={headerFormVariants}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div
+            variants={heroTextContainer}
+            initial="hidden"
+            animate="show"
+            className="mb-8 text-center"
+          >
+            <motion.h1
+              variants={heroTextItem}
+              className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2"
+            >
+              Tactical Database Search
+            </motion.h1>
+            <motion.p
+              variants={heroTextItem}
+              className="text-slate-400 max-w-2xl mx-auto"
+            >
+              Query the meta graph with natural language. Our AI will find the
+              most relevant loadouts based on tactical descriptions and vector
+              similarity.
+            </motion.p>
+          </motion.div>
+
+          <motion.form
+            onSubmit={handleSearch}
+            className="max-w-3xl mx-auto mb-12 flex gap-3"
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <div className="relative flex-1 group">
+              <div className="absolute -left-3 top-1/2 -translate-y-1/2 text-cyan-400/30 text-xl select-none pointer-events-none">[</div>
+              <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-cyan-400/30 text-xl select-none pointer-events-none">]</div>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-cyan-400 transition-colors" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="e.g., aggressive mid-range AR for ranked"
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 placeholder-slate-500 outline-none transition group-focus-within:bg-slate-800/80 group-focus-within:ring-2 group-focus-within:ring-cyan-500/40"
+              />
+            </div>
+            <motion.button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={{ boxShadow: "0 0 20px rgba(34,211,238,0.8)" }}
+              animate={
+                loading
+                  ? {
+                      boxShadow: [
+                        "0px 0px 0px rgba(8,145,178,0)",
+                        "0px 0px 20px rgba(8,145,178,0.8)",
+                        "0px 0px 0px rgba(8,145,178,0)",
+                      ],
+                      transition: {
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                    }
+                  : { boxShadow: "0px 0px 0px rgba(8,145,178,0)" }
+              }
+            >
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Crosshair className="h-5 w-5" />
+              )}
+              Search
+          </motion.button>
+          </motion.form>
+        </motion.div>
+
+        {error && (
+          <div className="max-w-3xl mx-auto mb-8 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-3">
+            <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {results.length > 0 && (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {results.map((loadout) => (
+                <LoadoutCard key={loadout.id} loadout={loadout} />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {!loading && !error && results.length === 0 && (
+          <div className="text-center py-16">
+            <Crosshair className="h-12 w-12 mx-auto text-slate-700 mb-4" />
+            <p className="text-slate-400 text-lg">
+              Enter a tactical query to discover loadouts.
+            </p>
+            <p className="text-slate-500 text-sm mt-1">
+              Example: "high mobility SMG for close quarters"
+            </p>
+          </div>
+        )}
+
+        {loading && results.length === 0 && (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/components/ui/button.tsx">
+import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const buttonVariants = cva(
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        outline:
+          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+        ghost:
+          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        destructive:
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default:
+          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        icon: "size-8",
+        "icon-xs":
+          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm":
+          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+
+function Button({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  return (
+    <ButtonPrimitive
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+
+export { Button, buttonVariants }
+</file>
+
+<file path="frontend/components/ui/input.tsx">
+import * as React from "react"
+import { Input as InputPrimitive } from "@base-ui/react/input"
+
+import { cn } from "@/lib/utils"
+
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  return (
+    <InputPrimitive
+      type={type}
+      data-slot="input"
+      className={cn(
+        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Input }
+</file>
+
+<file path="frontend/components/ui/select.tsx">
+"use client"
+
+import * as React from "react"
+import { Select as SelectPrimitive } from "@base-ui/react/select"
+
+import { cn } from "@/lib/utils"
+import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+
+const Select = SelectPrimitive.Root
+
+function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
+  return (
+    <SelectPrimitive.Group
+      data-slot="select-group"
+      className={cn("scroll-my-1 p-1", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+  return (
+    <SelectPrimitive.Value
+      data-slot="select-value"
+      className={cn("flex flex-1 text-left", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectTrigger({
+  className,
+  size = "default",
+  children,
+  ...props
+}: SelectPrimitive.Trigger.Props & {
+  size?: "sm" | "default"
+}) {
+  return (
+    <SelectPrimitive.Trigger
+      data-slot="select-trigger"
+      data-size={size}
+      className={cn(
+        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon
+        render={
+          <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+        }
+      />
+    </SelectPrimitive.Trigger>
+  )
+}
+
+function SelectContent({
+  className,
+  children,
+  side = "bottom",
+  sideOffset = 4,
+  align = "center",
+  alignOffset = 0,
+  alignItemWithTrigger = true,
+  ...props
+}: SelectPrimitive.Popup.Props &
+  Pick<
+    SelectPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
+  >) {
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Positioner
+        side={side}
+        sideOffset={sideOffset}
+        align={align}
+        alignOffset={alignOffset}
+        alignItemWithTrigger={alignItemWithTrigger}
+        className="isolate z-50"
+      >
+        <SelectPrimitive.Popup
+          data-slot="select-content"
+          data-align-trigger={alignItemWithTrigger}
+          className={cn("relative isolate z-50 max-h-(--available-height) w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+          {...props}
+        >
+          <SelectScrollUpButton />
+          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          <SelectScrollDownButton />
+        </SelectPrimitive.Popup>
+      </SelectPrimitive.Positioner>
+    </SelectPrimitive.Portal>
+  )
+}
+
+function SelectLabel({
+  className,
+  ...props
+}: SelectPrimitive.GroupLabel.Props) {
+  return (
+    <SelectPrimitive.GroupLabel
+      data-slot="select-label"
+      className={cn("px-1.5 py-1 text-xs text-muted-foreground", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectItem({
+  className,
+  children,
+  ...props
+}: SelectPrimitive.Item.Props) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(
+        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        className
+      )}
+      {...props}
+    >
+      <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+        {children}
+      </SelectPrimitive.ItemText>
+      <SelectPrimitive.ItemIndicator
+        render={
+          <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
+        }
+      >
+        <CheckIcon className="pointer-events-none" />
+      </SelectPrimitive.ItemIndicator>
+    </SelectPrimitive.Item>
+  )
+}
+
+function SelectSeparator({
+  className,
+  ...props
+}: SelectPrimitive.Separator.Props) {
+  return (
+    <SelectPrimitive.Separator
+      data-slot="select-separator"
+      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
+      {...props}
+    />
+  )
+}
+
+function SelectScrollUpButton({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.ScrollUpArrow>) {
+  return (
+    <SelectPrimitive.ScrollUpArrow
+      data-slot="select-scroll-up-button"
+      className={cn(
+        "top-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    >
+      <ChevronUpIcon
+      />
+    </SelectPrimitive.ScrollUpArrow>
+  )
+}
+
+function SelectScrollDownButton({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.ScrollDownArrow>) {
+  return (
+    <SelectPrimitive.ScrollDownArrow
+      data-slot="select-scroll-down-button"
+      className={cn(
+        "bottom-0 z-10 flex w-full cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        className
+      )}
+      {...props}
+    >
+      <ChevronDownIcon
+      />
+    </SelectPrimitive.ScrollDownArrow>
+  )
+}
+
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+}
+</file>
+
+<file path="frontend/components/ui/textarea.tsx">
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Textarea }
+</file>
+
+<file path="frontend/components/WeaponCard.tsx">
+// File: frontend/components/WeaponCard.tsx
+interface Weapon {
+  id: number;
+  name: string;
+  category: string;
+  base_damage: number;
+  base_fire_rate: number;
+}
+
+export default function WeaponCard({ weapon }: { weapon: Weapon }) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow-lg hover:border-cyan-500 transition-colors">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-bold text-white">{weapon.name}</h3>
+        <span className="bg-cyan-950 text-cyan-400 text-xs px-2.5 py-1 rounded-full font-medium border border-cyan-800">
+          {weapon.category}
+        </span>
+      </div>
+      <div className="text-sm text-slate-400 space-y-1">
+        <p>Base Damage: <span className="text-slate-200 font-semibold">{weapon.base_damage}</span></p>
+        <p>Fire Rate: <span className="text-slate-200 font-semibold">{weapon.base_fire_rate} RPM</span></p>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/lib/api.ts">
+// File: frontend/lib/api.ts
+import axios from 'axios';
+import Cookies from 'js-cookie';
+
+// Create a custom Axios instance
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api/v1',
+});
+
+// Intercept requests to inject the JWT token
+api.interceptors.request.use(
+  (config) => {
+    const token = Cookies.get('access_token');
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+</file>
+
+<file path="frontend/lib/utils.ts">
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+</file>
+
+<file path="frontend/public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="frontend/public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="frontend/public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="frontend/public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="frontend/public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path="frontend/.gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="frontend/AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="frontend/CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="frontend/components.json">
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "base-nova",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "rtl": false,
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "menuColor": "default",
+  "menuAccent": "subtle",
+  "registries": {}
+}
+</file>
+
+<file path="frontend/eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="frontend/next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="frontend/package.json">
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "axios": "^1.20.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^13.1.1",
+    "js-cookie": "^3.0.8",
+    "lucide-react": "^1.35.0",
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "shadcn": "^4.19.0",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="frontend/postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="frontend/README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="README.md">
+"# Esports Meta & Loadout Hub"
+</file>
+
+<file path="backend/api/serializers.py">
+# File: backend/api/serializers.py
+from rest_framework import serializers
+from .models import Weapon, Attachment, Loadout
+
+class WeaponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Weapon
+        fields = '__all__'
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = '__all__'
+
+class LoadoutSerializer(serializers.ModelSerializer):
+    # Dynamically fetch the actual weapon name
+    weapon_name = serializers.CharField(source='weapon.name', read_only=True)
+    # Custom field to calculate the AI match percentage
+    match_confidence = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Loadout
+        fields = ['id', 'weapon', 'weapon_name', 'tactical_description', 'match_confidence', 'created_at']
+
+    def get_match_confidence(self, obj):
+        # pgvector creates a 'distance' annotation during our search
+        if hasattr(obj, 'distance') and obj.distance is not None:
+            # Cosine distance ranges from 0 (perfect) to 2 (opposite).
+            # This formula converts that distance into a clean 0-100% score.
+            score = (1 - (obj.distance / 2)) * 100
+            return f"{round(score, 1)}%"
+        return None
+</file>
+
+<file path="backend/api/urls.py">
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import WeaponViewSet, LoadoutViewSet, VectorSearchView
+
+router = DefaultRouter()
+router.register(r'weapons', WeaponViewSet)
+router.register(r'loadouts', LoadoutViewSet)
+
+urlpatterns = [
+    # Custom endpoint MUST be placed before the router to prevent "search" from being treated as an ID
+    path('loadouts/search/', VectorSearchView.as_view(), name='loadout-vector-search'),
+    path('', include(router.urls)),
+]
+</file>
+
+<file path="backend/config/urls.py">
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('api/v1/', include('api.urls')),
+    
+    # JWT Authentication Endpoints
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+]
+</file>
+
+<file path="frontend/app/loadouts/new/page.tsx">
+// frontend/app/loadouts/new/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Crosshair, Loader2, ShieldAlert } from "lucide-react";
+import Cookies from "js-cookie";
+import api from "@/lib/api";
+
+interface Weapon {
+  id: number;
+  name: string;
+}
+
+export default function DeployLoadoutPage() {
+  const router = useRouter();
+  const [weapons, setWeapons] = useState<Weapon[]>([]);
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string>("");
+  const [tacticalDescription, setTacticalDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchingWeapons, setFetchingWeapons] = useState(true);
+
+  // Authentication check & weapon fetch
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    const fetchWeapons = async () => {
+      try {
+        const response = await api.get("/weapons/");
+        setWeapons(response.data);
+      } catch (err: any) {
+        console.error("Failed to fetch weapons:", err);
+        setError("Failed to load weapon list. Please try again.");
+      } finally {
+        setFetchingWeapons(false);
+      }
+    };
+
+    fetchWeapons();
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWeaponId || !tacticalDescription.trim()) {
+      setError("Please select a weapon and provide a tactical description.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await api.post("/loadouts/", {
+        weapon: Number(selectedWeaponId),
+        tactical_description: tacticalDescription.trim(),
+      });
+      router.push("/profile");
+    } catch (err: any) {
+      console.error("Deployment failed:", err);
+      setError(
+        err?.response?.data?.detail ||
+          "Deployment failed. Please try again or check authentication."
+      );
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Ambient background radial gradient */}
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-950 to-slate-950" />
+
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
+            Deployment Uplink
+          </h1>
+          <p className="text-slate-400 max-w-2xl mx-auto">
+            Configure and deploy a new tactical loadout to your command center.
+          </p>
+        </div>
+
+        {/* Form container with slide-up spring */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="p-8 rounded-xl bg-slate-900/40 backdrop-blur-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/5"
+        >
+          {fetchingWeapons ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 text-cyan-400 animate-spin" />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Weapon Selection */}
+              <div>
+                <label
+                  htmlFor="weapon"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Primary Weapon
+                </label>
+                <select
+                  id="weapon"
+                  value={selectedWeaponId}
+                  onChange={(e) => setSelectedWeaponId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 outline-none transition"
+                >
+                  <option value="" disabled>
+                    Select a weapon...
+                  </option>
+                  {weapons.map((weapon) => (
+                    <option key={weapon.id} value={weapon.id}>
+                      {weapon.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tactical Description */}
+              <div>
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-slate-300 mb-2"
+                >
+                  Tactical Description
+                </label>
+                <textarea
+                  id="description"
+                  value={tacticalDescription}
+                  onChange={(e) => setTacticalDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Describe your loadout strategy, attachments, playstyle..."
+                  className="w-full px-4 py-3 rounded-lg bg-slate-800/50 border border-slate-700/50 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 text-slate-100 placeholder-slate-500 outline-none transition resize-none"
+                />
+              </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 flex items-center gap-3">
+                  <ShieldAlert className="h-5 w-5 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={loading || !selectedWeaponId || !tacticalDescription.trim()}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ boxShadow: "0 0 20px rgba(34,211,238,0.8)" }}
+                animate={
+                  loading
+                    ? {
+                        boxShadow: [
+                          "0px 0px 0px rgba(8,145,178,0)",
+                          "0px 0px 20px rgba(8,145,178,0.8)",
+                          "0px 0px 0px rgba(8,145,178,0)",
+                        ],
+                        transition: {
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        },
+                      }
+                    : { boxShadow: "0px 0px 0px rgba(8,145,178,0)" }
+                }
+              >
+                {loading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Crosshair className="h-5 w-5" />
+                )}
+                Deploy Loadout
+              </motion.button>
+            </form>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/components/LoadoutCard.tsx">
+// frontend/components/LoadoutCard.tsx
+"use client";
+
+import { motion } from "framer-motion";
+import { User } from "lucide-react";
+
+// Type definition for a Loadout returned by the backend
+export interface Loadout {
+  id: number;
+  weapon_name: string;
+  category: string;
+  creator_username: string;
+  description: string;
+  similarity?: number | null; // optional; null when not a vector search result
+}
+
+// Map confidence levels to color schemes (hex and tailwind classes)
+const confidenceColors = {
+  high: {
+    label: "High",
+    text: "text-cyan-400",
+    bar: "bg-cyan-500",
+    head: "bg-cyan-300",
+    hex: "#22d3ee",
+    borderHover: "hover:border-cyan-500/50",
+    shadow: "rgba(34,211,238,0.8)",
+  },
+  medium: {
+    label: "Medium",
+    text: "text-yellow-400",
+    bar: "bg-yellow-500",
+    head: "bg-yellow-300",
+    hex: "#eab308",
+    borderHover: "hover:border-yellow-500/50",
+    shadow: "rgba(234,179,8,0.8)",
+  },
+  low: {
+    label: "Low",
+    text: "text-red-400",
+    bar: "bg-red-500",
+    head: "bg-red-300",
+    hex: "#ef4444",
+    borderHover: "hover:border-red-500/50",
+    shadow: "rgba(239,68,68,0.8)",
+  },
+};
+
+// Neutral fallback for when similarity is null/undefined (used for hover glow on weapon name)
+const neutralConfidence = {
+  label: "",
+  text: "text-slate-400",
+  bar: "bg-slate-500",
+  head: "bg-slate-300",
+  hex: "#64748b",
+  borderHover: "hover:border-slate-500/50",
+  shadow: "rgba(100,116,139,0.5)",
+};
+
+function getConfidenceLevel(similarity: number) {
+  const percent = Math.round(similarity * 100);
+  if (percent >= 70) return confidenceColors.high;
+  if (percent >= 40) return confidenceColors.medium;
+  return confidenceColors.low;
+}
+
+// Stagger container for text elements inside the card
+const textContainerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const textItemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+};
+
+interface LoadoutCardProps {
+  loadout: Loadout;
+}
+
+export default function LoadoutCard({ loadout }: LoadoutCardProps) {
+  // Conditional similarity check
+  const hasSimilarity = loadout.similarity !== undefined && loadout.similarity !== null;
+
+  // Only call getConfidenceLevel if similarity exists, otherwise use neutral fallback
+  const confidence = hasSimilarity
+    ? getConfidenceLevel(loadout.similarity as number)
+    : neutralConfidence;
+
+  return (
+    <motion.div
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0 },
+      }}
+      whileHover={{
+        scale: 1.05,
+        y: -10,
+        boxShadow: [
+          `0 0 20px ${confidence.shadow}`,
+          `0 0 40px ${confidence.shadow}`,
+          `0 0 20px ${confidence.shadow}`,
+        ],
+        transition: {
+          scale: { type: "spring", stiffness: 200, damping: 20 },
+          y: { type: "spring", stiffness: 200, damping: 20 },
+          boxShadow: { duration: 1, repeat: Infinity, ease: "easeInOut" },
+        },
+      }}
+      whileTap={{ scale: 0.98 }}
+      className={`relative p-6 rounded-xl bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 ${confidence.borderHover} shadow-lg shadow-slate-900/30 transition-all group`}
+      style={{ boxShadow: "0 0 0 rgba(0,0,0,0)" }}
+    >
+      {/* Inner staggered text */}
+      <motion.div
+        variants={textContainerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        {/* Weapon Name and Category */}
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <motion.h3
+              variants={textItemVariants}
+              className={`text-xl font-semibold text-white transition-all group-hover:drop-shadow-[0_0_10px_${confidence.hex}] group-hover:text-cyan-100`}
+              style={{ textShadow: "0 0 0 transparent" }}
+            >
+              {loadout.weapon_name}
+            </motion.h3>
+            <motion.span
+              variants={textItemVariants}
+              className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700/50 uppercase tracking-widest"
+            >
+              {loadout.category}
+            </motion.span>
+          </div>
+          <motion.div
+            variants={textItemVariants}
+            className="flex items-center gap-1 text-slate-400"
+          >
+            <User className="h-4 w-4" />
+            <span className="text-sm">{loadout.creator_username}</span>
+          </motion.div>
+        </div>
+
+        {/* Tactical Description */}
+        <motion.p
+          variants={textItemVariants}
+          className="text-slate-300 text-sm leading-relaxed mb-4 line-clamp-3"
+        >
+          {loadout.description}
+        </motion.p>
+
+        {/* Match Confidence Meter - only rendered if similarity is present */}
+        {hasSimilarity && (
+          <motion.div variants={textItemVariants} className="mt-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-slate-400">
+                Match Confidence
+              </span>
+              <span className={`text-sm font-bold ${confidence.text}`}>
+                {Math.round((loadout.similarity as number) * 100)}% · {confidence.label}
+              </span>
+            </div>
+            <div className="relative w-full h-2 bg-slate-800 rounded-full">
+              {/* Filled bar */}
+              <motion.div
+                className={`absolute left-0 top-0 h-full rounded-full ${confidence.bar}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.round((loadout.similarity as number) * 100)}%` }}
+                transition={{
+                  type: "spring",
+                  stiffness: 50,
+                  damping: 10,
+                  delay: 0.2,
+                }}
+              />
+              {/* Glowing head */}
+              <motion.div
+                className={`absolute top-1/2 -translate-y-1/2 h-3 w-3 rounded-full ${confidence.head}`}
+                style={{ boxShadow: `0 0 12px 3px ${confidence.shadow}` }}
+                initial={{ left: "0%" }}
+                animate={{ left: `calc(${Math.round((loadout.similarity as number) * 100)}% - 6px)` }}
+                transition={{
+                  type: "spring",
+                  stiffness: 50,
+                  damping: 10,
+                  delay: 0.2,
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+</file>
+
+<file path="frontend/components/Navbar.tsx">
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Cookies from "js-cookie";
+import { motion } from "framer-motion";
+import { LogOut, ShieldCheck, Swords, User, Search, Crosshair } from "lucide-react";
+
+function decodeJwtPayload(token: string | undefined): Record<string, any> | null {
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const jsonPayload = decodeURIComponent(
+      atob(paddedBase64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
+
+const navLinks = [
+  { href: "/", label: "Search Graph", icon: Search },
+  { href: "/loadouts/new", label: "Deploy Loadout", icon: Crosshair },
+  { href: "/profile", label: "Command Center", icon: User }, // Add this line
+];
+
+// MUST be defined outside the component to prevent React re-render glitches
+const MotionLink = motion(Link);
+
+export default function Navbar() {
+  const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const accessToken = Cookies.get("access_token");
+    if (accessToken) {
+      setIsLoggedIn(true);
+      const payload = decodeJwtPayload(accessToken);
+      const extractedId = payload?.sub || payload?.user_id || payload?.id;
+      if (extractedId) {
+        setUserId(String(extractedId));
+      } else {
+        setUserId(null);
+      }
+    } else {
+      setIsLoggedIn(false);
+      setUserId(null);
+    }
+    setIsLoading(false);
+  }, []);
+
+  const handleLogout = () => {
+    Cookies.remove("access_token");
+    Cookies.remove("refresh_token");
+    window.location.href = "/";
+  };
+
+  return (
+    <motion.nav
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ type: "spring", stiffness: 200, damping: 20 }}
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-900/70 border-b border-cyan-500/20 shadow-lg shadow-cyan-500/5"
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center gap-2 group">
+            <Swords className="h-6 w-6 text-cyan-400 group-hover:text-cyan-300 transition-colors" />
+            <span className="text-lg font-bold tracking-wide text-white group-hover:text-cyan-100 transition-colors group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+              Esports Meta Hub
+            </span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-6">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`relative flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-cyan-300"
+                      : "text-slate-300 hover:text-cyan-200"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-bg"
+                      className="absolute inset-0 bg-cyan-500/10 border border-cyan-500/30 rounded-md -z-10"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <Icon className="h-4 w-4" />
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {isLoading ? (
+              <div className="h-9 w-24 bg-slate-800/50 rounded-md animate-pulse" />
+            ) : !isLoggedIn ? (
+              <MotionLink
+                href="/login"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-medium transition-colors"
+                animate={{ boxShadow: [
+                  "0 0 0px rgba(34,211,238,0.1)",
+                  "0 0 15px rgba(34,211,238,0.4)",
+                  "0 0 0px rgba(34,211,238,0.1)"
+                ] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Connect
+              </MotionLink>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800/60 border border-slate-700/50">
+                  {userId ? (
+                    <>
+                      <User className="h-4 w-4 text-cyan-400" />
+                      <span className="text-sm text-slate-200 font-mono">{userId}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-4 w-4 text-cyan-400" />
+                      <span className="text-sm text-cyan-300">Secure Session</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 font-medium transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.nav>
+  );
+}
+</file>
+
+<file path=".gitignore">
+node_modules/
+.next/
+__pycache__/
+*.pyc
+venv/
+env/
+.env
+.env.local
+.DS_Store
+media/
+staticfiles/
+
+# Secrets
+.env
+*.env
+
+# Backend (Django)
+backend/venv/
+backend/__pycache__/
+*.pyc
+db.sqlite3
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+</file>
+
+<file path="backend/api/admin.py">
+# File: backend/api/admin.py
+from django.contrib import admin
+from .models import WeaponCategory, Weapon, Attachment, Loadout
+
+admin.site.register(WeaponCategory)
+admin.site.register(Weapon)
+admin.site.register(Attachment)
+admin.site.register(Loadout)
+</file>
+
+<file path="backend/config/settings.py">
+from pathlib import Path
+
+import os
+from dotenv import load_dotenv
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = 'django-insecure-!v_b)20@0f$c39#@%8_ecc!^c&ew+-w5cew8an#3ot^#=5aw))'
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = []
+
+
+# Application definition
+
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    
+    'corsheaders',
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'pgvector.django',
+
+    'django.contrib.postgres',
+    # Local Apps
+    'api',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    
+    'corsheaders.middleware.CorsMiddleware',
+
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'config.urls'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = 'config.wsgi.application'
+
+
+# Database
+# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+
+import os
+
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'esports_meta'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres_password'),
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
+
+
+# Password validation
+# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# Internationalization
+# https://docs.djangoproject.com/en/6.1/topics/i18n/
+
+LANGUAGE_CODE = 'en-us'
+
+TIME_ZONE = 'UTC'
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/6.1/howto/static-files/
+
+STATIC_URL = 'static/'
+
+
+# Email
+# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+    },
+}
+
+
+# CORS Security
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# REST Framework Security
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    )
+}
+</file>
+
+<file path="backend/requirements.txt">
+amqp==5.3.1
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+asgiref==3.12.1
+billiard==4.2.4
+celery==5.6.3
+certifi==2026.7.22
+click==8.5.0
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.3.0
+colorama==0.4.6
+Django==6.1
+django-cors-headers==4.9.0
+djangorestframework==3.18.0
+djangorestframework_simplejwt==5.5.1
+filelock==3.32.4
+fsspec==2026.7.0
+h11==0.16.0
+hf-xet==1.6.0
+httpcore==1.0.9
+httpcore2==2.12.0
+httpx==0.28.1
+httpx2==2.12.0
+huggingface_hub==1.29.0
+idna==3.19
+Jinja2==3.1.6
+jiter==0.16.0
+joblib==1.5.3
+kombu==5.6.2
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+mpmath==1.3.0
+narwhals==2.25.0
+networkx==3.6.1
+numpy==2.5.2
+openai==3.6.0
+packaging==26.3
+pgvector==0.5.0
+prompt_toolkit==3.0.53
+psycopg2-binary==2.9.12
+pydantic==2.13.5
+pydantic_core==2.46.5
+Pygments==2.21.0
+PyJWT==2.13.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.3
+PyYAML==6.0.3
+regex==2026.8.31
+rich==15.0.0
+safetensors==0.8.0
+scikit-learn==1.9.0
+scipy==1.18.1
+sentence-transformers==6.0.1
+setuptools==84.0.0
+shellingham==1.5.4
+six==1.17.0
+sniffio==1.3.1
+sqlparse==0.6.0
+sympy==1.14.0
+threadpoolctl==3.6.0
+tokenizers==0.23.1
+torch
+tqdm==4.70.0
+transformers==5.16.1
+truststore==0.10.4
+typer==0.27.2
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+tzdata==2026.3
+tzlocal==5.4.4
+vine==5.1.0
+wcwidth==0.8.3
+gunicorn>=21.2.0
+</file>
+
+<file path="backend/api/models.py">
+# File: backend/api/models.py
+from django.db import models
+from django.contrib.auth.models import User
+from pgvector.django import VectorField, HnswIndex
+from sentence_transformers import SentenceTransformer
+
+# Initialize the Hugging Face AI model once at the module level
+ai_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+class WeaponCategory(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
+class Weapon(models.Model):
+    name = models.CharField(max_length=100)
+    weapon_type = models.ForeignKey(WeaponCategory, on_delete=models.SET_NULL, null=True, related_name='weapons')
+
+    def __str__(self):
+        return self.name
+
+class Attachment(models.Model):
+    name = models.CharField(max_length=100)
+    slot = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.name} ({self.slot})"
+
+class Loadout(models.Model):
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='loadouts')
+    weapon = models.ForeignKey(Weapon, on_delete=models.CASCADE, related_name='loadouts')
+    attachments = models.ManyToManyField(Attachment, blank=True)
+    tactical_description = models.TextField(help_text="LLM generated summary of the build")
+    embedding = VectorField(dimensions=384, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            HnswIndex(
+                name='loadout_embedding_index',
+                fields=['embedding'],
+                m=16,
+                ef_construction=64,
+                opclasses=['vector_cosine_ops']
+            )
+        ]
+
+    # Correctly aligned with the Loadout class methods
+    def save(self, *args, **kwargs):
+        if self.tactical_description:
+            # Convert the text into a 384-dimension array and assign it to the vector field
+            self.embedding = ai_model.encode(self.tactical_description).tolist()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.weapon.name} by {self.creator.username}"
+</file>
+
+<file path="backend/api/views.py">
+# File: backend/api/views.py
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
+from pgvector.django import CosineDistance
+
+from .models import Weapon, Attachment, Loadout, ai_model
+from .serializers import WeaponSerializer, AttachmentSerializer, LoadoutSerializer
+
+class WeaponViewSet(viewsets.ModelViewSet):
+    queryset = Weapon.objects.all()
+    serializer_class = WeaponSerializer
+
+class AttachmentViewSet(viewsets.ModelViewSet):
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentSerializer
+
+class LoadoutViewSet(viewsets.ModelViewSet):
+    queryset = Loadout.objects.all()
+    serializer_class = LoadoutSerializer
+
+    def perform_create(self, serializer):
+        # AI Vector generation is safely handled in models.py save()
+        serializer.save(creator=self.request.user)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """
+        Returns the authenticated user's personal loadouts, ordered by most recent.
+        """
+        loadouts = Loadout.objects.filter(creator=request.user).order_by('-created_at')
+        results = []
+        for loadout in loadouts:
+            results.append({
+                "id": loadout.id,
+                "weapon_name": loadout.weapon.name,
+                "category": loadout.weapon.weapon_type.name,
+                "creator_username": loadout.creator.username,
+                "description": loadout.tactical_description,
+                "similarity": None
+            })
+        return Response({"results": results}, status=status.HTTP_200_OK)
+
+class VectorSearchView(APIView):
+    """
+    POST /loadouts/search/
+    Accepts a natural language query and returns the top 6 semantically similar loadouts.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        query = request.data.get('query')
+        if not query or not isinstance(query, str) or not query.strip():
+            return Response(
+                {"detail": "A valid 'query' string is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Encode the query using the global SentenceTransformer model
+            query_vector = ai_model.encode(query.strip()).tolist()
+        except Exception as e:
+            return Response(
+                {"detail": f"Failed to encode query: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Retrieve top 6 loadouts ordered by cosine distance (closest first)
+        loadouts = Loadout.objects.annotate(
+            distance=CosineDistance('embedding', query_vector)
+        ).order_by('distance')[:6]
+
+        results = []
+        for loadout in loadouts:
+            similarity = 1.0 - loadout.distance
+            results.append({
+                "id": loadout.id,
+                "weapon_name": loadout.weapon.name,
+                "category": loadout.weapon.weapon_type.name,
+                "creator_username": loadout.creator.username,
+                "description": loadout.tactical_description,
+                "similarity": round(similarity, 6)
+            })
+
+        return Response({"results": results}, status=status.HTTP_200_OK)
+</file>
+
+</files>
