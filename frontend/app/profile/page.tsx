@@ -2,19 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence, Variants } from "framer-motion";
-import { Trash2, ShieldAlert, User } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShieldAlert, User, X, Loader2, Save } from "lucide-react";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
 import LoadoutCard, { type Loadout } from "@/components/LoadoutCard";
 
 export default function ProfilePage() {
   const router = useRouter();
-  
+
   // FIX: Explicitly type the array so TypeScript knows it contains Loadout objects
   const [loadouts, setLoadouts] = useState<Loadout[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tactical Calibration Modal state
+  const [editingLoadout, setEditingLoadout] = useState<Loadout | null>(null);
+  const [editDescription, setEditDescription] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const token = Cookies.get("access_token");
@@ -51,17 +56,59 @@ export default function ProfilePage() {
     }
   };
 
+  const handleOpenEdit = (loadout: Loadout) => {
+    setEditingLoadout(loadout);
+    setEditDescription(loadout.description);
+  };
+
+  const handleCloseEdit = () => {
+    if (isUpdating) return;
+    setEditingLoadout(null);
+    setEditDescription("");
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLoadout || !editDescription.trim()) return;
+
+    setIsUpdating(true);
+    try {
+      await api.patch(`/loadouts/${editingLoadout.id}/`, {
+        tactical_description: editDescription.trim(),
+      });
+
+      // Mutate local state directly — no full re-fetch required
+      setLoadouts((prev) =>
+        prev.map((item) =>
+          item.id === editingLoadout.id
+            ? { ...item, description: editDescription.trim() }
+            : item
+        )
+      );
+      setEditingLoadout(null);
+      setEditDescription("");
+    } catch (err: any) {
+      console.error("Update failed:", err);
+      setError(
+        err?.response?.data?.detail ||
+          "Failed to update configuration. Please try again."
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 relative">
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/20 via-slate-950 to-slate-950" />
-      
+
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2">
             Personal Command Center
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto">
-            Manage your deployed tactical loadouts. Review, deploy, or revoke
+            Manage your deployed tactical loadouts. Review, calibrate, or revoke
             configurations from the front lines.
           </p>
         </div>
@@ -108,18 +155,15 @@ export default function ProfilePage() {
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                  className="relative group"
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                  className="h-full"
                 >
-                  <LoadoutCard loadout={loadout} />
-                  <button
-                    onClick={() => handleDelete(loadout.id)}
-                    className="absolute top-3 right-3 p-2 rounded-md bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Revoke Deployment"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <LoadoutCard
+                    loadout={loadout}
+                    onDelete={handleDelete}
+                    onEdit={handleOpenEdit}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -138,6 +182,98 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Tactical Calibration Modal */}
+      <AnimatePresence>
+        {editingLoadout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calibration-modal-title"
+            onClick={handleCloseEdit}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 26 }}
+              className="w-full max-w-lg p-6 rounded-2xl bg-slate-900 border border-cyan-500/30 shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-5">
+                <div>
+                  <h3
+                    id="calibration-modal-title"
+                    className="text-lg font-bold text-white flex items-center gap-2"
+                  >
+                    Calibrating {editingLoadout.weapon_name}
+                  </h3>
+                  <span className="text-xs font-mono text-cyan-400">
+                    {editingLoadout.category} · SPEC_ID: #
+                    {editingLoadout.id.toString().padStart(4, "0")}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseEdit}
+                  disabled={isUpdating}
+                  aria-label="Close calibration modal"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="tactical-description"
+                    className="block text-xs font-mono text-slate-400 mb-1.5 uppercase tracking-wider"
+                  >
+                    Tactical Description
+                  </label>
+                  <textarea
+                    id="tactical-description"
+                    rows={4}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-lg bg-slate-950 border border-slate-700/60 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-slate-100 outline-none transition resize-none"
+                    placeholder="Update loadout strategy..."
+                    required
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCloseEdit}
+                    disabled={isUpdating}
+                    className="px-4 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdating || !editDescription.trim()}
+                    className="px-4 py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-sm font-semibold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Apply Calibration
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

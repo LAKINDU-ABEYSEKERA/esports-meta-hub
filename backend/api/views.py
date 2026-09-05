@@ -1,25 +1,31 @@
-# File: backend/api/views.py
+# backend/api/views.py
+
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
 from pgvector.django import CosineDistance
 
 from .models import Weapon, Attachment, Loadout, ai_model
 from .serializers import WeaponSerializer, AttachmentSerializer, LoadoutSerializer
+from .permissions import IsOwnerOrReadOnly
+
 
 class WeaponViewSet(viewsets.ModelViewSet):
     queryset = Weapon.objects.all()
     serializer_class = WeaponSerializer
 
+
 class AttachmentViewSet(viewsets.ModelViewSet):
     queryset = Attachment.objects.all()
     serializer_class = AttachmentSerializer
 
+
 class LoadoutViewSet(viewsets.ModelViewSet):
     queryset = Loadout.objects.all()
     serializer_class = LoadoutSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def perform_create(self, serializer):
         # AI Vector generation is safely handled in models.py save()
@@ -42,6 +48,7 @@ class LoadoutViewSet(viewsets.ModelViewSet):
                 "similarity": None
             })
         return Response({"results": results}, status=status.HTTP_200_OK)
+
 
 class VectorSearchView(APIView):
     """
