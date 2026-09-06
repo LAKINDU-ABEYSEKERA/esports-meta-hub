@@ -1,10 +1,10 @@
-# File: backend/api/models.py
+# backend/api/models.py
+
 from django.db import models
 from django.contrib.auth.models import User
 from pgvector.django import VectorField, HnswIndex
 from sentence_transformers import SentenceTransformer
 
-# Initialize the Hugging Face AI model once at the module level
 ai_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 class WeaponCategory(models.Model):
@@ -21,8 +21,25 @@ class Weapon(models.Model):
         return self.name
 
 class Attachment(models.Model):
+    SLOT_CHOICES = [
+        ('Muzzle', 'Muzzle'),
+        ('Barrel', 'Barrel'),
+        ('Optic', 'Optic'),
+        ('Underbarrel', 'Underbarrel'),
+        ('Magazine', 'Magazine'),
+        ('Stock', 'Stock'),
+    ]
+
     name = models.CharField(max_length=100)
-    slot = models.CharField(max_length=50)
+    slot = models.CharField(max_length=50, choices=SLOT_CHOICES)
+    damage_modifier = models.FloatField(default=0.0)
+    ads_modifier = models.FloatField(default=0.0)
+    recoil_modifier = models.FloatField(default=0.0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'slot'], name='unique_attachment_name_slot')
+        ]
 
     def __str__(self):
         return f"{self.name} ({self.slot})"
@@ -46,10 +63,8 @@ class Loadout(models.Model):
             )
         ]
 
-    # Correctly aligned with the Loadout class methods
     def save(self, *args, **kwargs):
         if self.tactical_description:
-            # Convert the text into a 384-dimension array and assign it to the vector field
             self.embedding = ai_model.encode(self.tactical_description).tolist()
         super().save(*args, **kwargs)
 

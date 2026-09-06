@@ -1,9 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import WeaponViewSet, LoadoutViewSet, VectorSearchView
+from .views import WeaponViewSet, AttachmentViewSet, LoadoutViewSet, VectorSearchView
 
 router = DefaultRouter()
 router.register(r'weapons', WeaponViewSet)
+router.register(r'attachments', AttachmentViewSet)
 router.register(r'loadouts', LoadoutViewSet)
 
 urlpatterns = [
