@@ -1,3 +1,4 @@
+// frontend/app/profile/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -6,7 +7,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, User, X, Loader2, Save } from "lucide-react";
 import Cookies from "js-cookie";
 import api from "@/lib/api";
-import LoadoutCard, { type Loadout, type Attachment } from "@/components/LoadoutCard";
+import LoadoutCard, {
+  type Loadout,
+  type Attachment,
+} from "@/components/LoadoutCard";
 import {
   SLOT_ORDER,
   METER_SCALE,
@@ -35,10 +39,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Track the ID of the loadout currently being purged
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   // Tactical Calibration Modal state
   const [editingLoadout, setEditingLoadout] = useState<Loadout | null>(null);
   const [editDescription, setEditDescription] = useState("");
-  const [editEquipped, setEditEquipped] = useState<Record<string, number | null>>({});
+  const [editEquipped, setEditEquipped] = useState<
+    Record<string, number | null>
+  >({});
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
@@ -94,12 +103,15 @@ export default function ProfilePage() {
   );
 
   const handleDelete = async (id: number) => {
+    setDeletingId(id);
     try {
       await api.delete(`/loadouts/${id}/`);
       setLoadouts((prev) => prev.filter((loadout) => loadout.id !== id));
     } catch (err: any) {
       console.error("Delete failed:", err);
       setError("Failed to revoke deployment. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -123,10 +135,6 @@ export default function ProfilePage() {
     setEditEquipped({});
   };
 
-  // Shadcn's Select works off string values, so "none" is our sentinel for
-  // an empty slot — Select/Radix-style primitives reject an empty string.
-  // Base UI's onValueChange can also pass null directly; we treat that the
-  // same as our "none" sentinel.
   const handleEditSlotChange = (slot: string, value: string | null) => {
     setEditEquipped((prev) => ({
       ...prev,
@@ -149,8 +157,6 @@ export default function ProfilePage() {
         attachment_ids,
       });
 
-      // Resolve the full attachment objects from the pre-fetched pool so the
-      // card's micro-chips and stat badges update immediately, no re-fetch.
       const updatedAttachments = attachment_ids
         .map((id) => attachments.find((a) => a.id === id))
         .filter((a): a is Attachment => Boolean(a));
@@ -230,21 +236,28 @@ export default function ProfilePage() {
               },
             }}
           >
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               {loadouts.map((loadout) => (
                 <motion.div
                   key={loadout.id}
                   layout
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.75,
+                    y: -20,
+                    filter: "blur(12px) brightness(2)",
+                    transition: { duration: 0.45, ease: "easeInOut" },
+                  }}
+                  transition={{ type: "spring", stiffness: 220, damping: 25 }}
                   className="h-full"
                 >
                   <LoadoutCard
                     loadout={loadout}
                     onDelete={handleDelete}
                     onEdit={handleOpenEdit}
+                    isDeleting={deletingId === loadout.id}
                   />
                 </motion.div>
               ))}
@@ -311,7 +324,7 @@ export default function ProfilePage() {
               </div>
 
               <form onSubmit={handleUpdate} className="space-y-5">
-                {/* Attachment Re-Slotting Matrix */}
+                {/* Attachment Matrix */}
                 <div>
                   <label className="block text-xs font-mono text-slate-400 mb-1.5 uppercase tracking-wider">
                     Attachment Matrix
@@ -327,33 +340,43 @@ export default function ProfilePage() {
                         </label>
                         <Select
                           value={
-                            editEquipped[slot] === null || editEquipped[slot] === undefined
+                            editEquipped[slot] === null ||
+                            editEquipped[slot] === undefined
                               ? "none"
                               : String(editEquipped[slot])
                           }
-                          onValueChange={(value) => handleEditSlotChange(slot, value)}
+                          onValueChange={(value) =>
+                            handleEditSlotChange(slot, value)
+                          }
                           disabled={isUpdating}
                         >
                           <SelectTrigger className={SLOT_TRIGGER_CLASS}>
                             <SelectValue placeholder="None / Stock">
                               {editEquipped[slot]
-                                ? attachments.find((a) => a.id === editEquipped[slot])?.name
+                                ? attachments.find(
+                                    (a) => a.id === editEquipped[slot]
+                                  )?.name
                                 : "None / Stock"}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent className={SELECT_CONTENT_CLASS}>
-                            <SelectItem value="none" className={SELECT_ITEM_CLASS}>
+                            <SelectItem
+                              value="none"
+                              className={SELECT_ITEM_CLASS}
+                            >
                               None / Stock
                             </SelectItem>
-                            {(attachmentsBySlot[slot] ?? []).map((attachment) => (
-                              <SelectItem
-                                key={attachment.id}
-                                value={String(attachment.id)}
-                                className={SELECT_ITEM_CLASS}
-                              >
-                                {attachment.name}
-                              </SelectItem>
-                            ))}
+                            {(attachmentsBySlot[slot] ?? []).map(
+                              (attachment) => (
+                                <SelectItem
+                                  key={attachment.id}
+                                  value={String(attachment.id)}
+                                  className={SELECT_ITEM_CLASS}
+                                >
+                                  {attachment.name}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -361,7 +384,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Live Delta Recalibration Preview */}
+                {/* Telemetry Preview */}
                 <div>
                   <label className="block text-xs font-mono text-slate-400 mb-1.5 uppercase tracking-wider">
                     Live Telemetry Preview

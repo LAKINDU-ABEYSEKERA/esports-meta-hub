@@ -4,28 +4,31 @@ services:
     environment:
       POSTGRES_DB: esports_meta
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_PASSWORD: 1234
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgvector_data:/var/lib/postgresql/data
 
   backend:
     build:
       context: ./backend
+    command: gunicorn --bind 0.0.0.0:8000 --reload config.wsgi:application
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres_password@db:5432/esports_meta
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgresql://postgres:1234@db:5432/esports_meta
       - DB_NAME=esports_meta
       - DB_USER=postgres
-      - DB_PASSWORD=postgres_password
+      - DB_PASSWORD=1234
       - DB_HOST=db
       - DB_PORT=5432
       - DJANGO_SETTINGS_MODULE=config.settings
       - SECRET_KEY=your-secret-key-here
-      - DEBUG=0
+      - DEBUG=1
     volumes:
+      - ./backend:/app
       - hf_cache:/root/.cache/huggingface
     depends_on:
       - db
@@ -33,10 +36,16 @@ services:
   frontend:
     build:
       context: ./frontend
+    command: npm run dev
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - backend
 

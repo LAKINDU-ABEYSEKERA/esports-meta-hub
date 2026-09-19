@@ -140,10 +140,11 @@ function RadarChart({
   alphaLabel: string;
   bravoLabel: string;
 }) {
-  const size = 320;
-  const cx = size / 2;
-  const cy = size / 2;
-  const maxRadius = 110;
+  const width = 380;
+  const height = 320;
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxRadius = 100;
   const rings = [0.25, 0.5, 0.75, 1];
 
   const alphaPath = buildPolygonPath(alphaValues, cx, cy, maxRadius);
@@ -151,7 +152,10 @@ function RadarChart({
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-sm">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="w-full max-w-md overflow-visible"
+      >
         {/* Background grid rings */}
         {rings.map((ringScale) => {
           const ringPoints = RADAR_AXES.map((_, i) =>
@@ -362,7 +366,7 @@ function LoadoutColumn({
           <label className="block text-xs font-mono text-slate-400 mb-1.5 uppercase tracking-wider">
             Select Deployment
           </label>
-                    <Select
+          <Select
             value={selectedLoadoutId}
             onValueChange={(val) => setSelectedLoadoutId(val ?? "")}
           >
@@ -401,7 +405,7 @@ function LoadoutColumn({
             <label className="block text-xs font-mono text-slate-400 mb-1.5 uppercase tracking-wider">
               Weapon
             </label>
-                        <Select value={weaponId} onValueChange={(val) => setWeaponId(val ?? "")}>
+            <Select value={weaponId} onValueChange={(val) => setWeaponId(val ?? "")}>
               <SelectTrigger
                 className={`w-full px-3 py-2 rounded-lg bg-slate-900/50 border-slate-700/50 text-slate-200 ${styles.hoverBorder} ${styles.ring} transition-colors`}
               >

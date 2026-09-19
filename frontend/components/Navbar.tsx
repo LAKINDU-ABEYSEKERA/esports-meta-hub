@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Cookies from "js-cookie";
 import { motion } from "framer-motion";
-import { LogOut, ShieldCheck, Swords, User, Search, Crosshair } from "lucide-react";
+import { LogOut, ShieldCheck, Swords, User, Search, Crosshair, Scale } from "lucide-react";
 
 function decodeJwtPayload(token: string | undefined): Record<string, any> | null {
   if (!token) return null;
@@ -27,10 +27,13 @@ function decodeJwtPayload(token: string | undefined): Record<string, any> | null
   }
 }
 
+
+
 const navLinks = [
   { href: "/", label: "Search Graph", icon: Search },
   { href: "/loadouts/new", label: "Deploy Loadout", icon: Crosshair },
-  { href: "/profile", label: "Command Center", icon: User }, // Add this line
+  { href: "/compare", label: "Tactical Matrix", icon: Scale },
+  { href: "/profile", label: "Command Center", icon: User },
 ];
 
 // MUST be defined outside the component to prevent React re-render glitches
